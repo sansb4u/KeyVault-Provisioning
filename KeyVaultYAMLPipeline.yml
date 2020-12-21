@@ -1,0 +1,142 @@
+trigger:
+- master
+- trunk
+- staging
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  x: $(major).$(minor)
+  y: $[counter(variables['Version.MajorMinor'], 0)]
+  z: $(x).$(y)  
+  ${{ if eq(variables['build.SourceBranchName'], 'master') }}:
+    azsubname: $(prodazsub)
+  ${{ if eq(variables['build.SourceBranchName'], 'trunk') }}:
+    azsubname: $(devazsub)
+  
+
+
+pool:
+  name: Azure Pipelines
+  vmImage: 'vs2017-win2016'
+  demands: npm
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build     
+    pool:
+     vmImage: 'windows-2019'     
+    steps:
+    - task: CopyFiles@2
+      displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+      inputs:
+        SourceFolder:  Runbook
+        TargetFolder: '$(build.artifactstagingdirectory)'
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Runbook Artifact: drop'
+      inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: 'drop'
+            publishLocation: 'Container'
+        
+    - task: TfxInstaller@3
+      inputs:
+            version: 'v0.7.x'
+    - task: PackageAzureDevOpsExtension@3
+      displayName: 'Package Extension' 
+      inputs:
+            rootFolder: 'Custom Extension'
+            outputPath: 'drop'
+            publisherId: 'PRASENJITKUMARPAUL'           
+            updateTasksVersion: true
+            extensionVersion: '$(z)'
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Extension Artifact' 
+      inputs:
+            PathtoPublish: 'drop'
+            ArtifactName: 'CustomExtension'
+
+
+- stage: Deploy
+  variables:
+  - ${{ if eq(variables['build.SourceBranchName'], 'master') }}:
+    - group: PROD
+  - ${{ if eq(variables['build.SourceBranchName'], 'trunk') }}:
+    - group: DEV  
+  displayName: 'Deploy'
+  jobs:  
+  - job: 'Deploy'  
+    pool:
+     vmImage: 'windows-2019'    
+    steps:
+        - script: echo $(azureSubscription)         
+        - task: DownloadBuildArtifacts@0
+          inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
+        - task: AzurePowerShell@5          
+          displayName: 'Azure PowerShell script: Setup Runbook'
+          inputs:            
+            azureSubscription: $(azsubname)
+            ScriptType: InlineScript
+            Inline: |                 
+              $resourceGroupName = $(resourceGroupName)
+              $automationAccountName = $(automationAccountName)
+              $runbookName = $(runbookName)
+              $scriptFolder = "$(System.ArtifactsDirectory)/drop/KeyVaultAutomation_Runbook.ps1"
+              Import-AzAutomationRunbook -Name $runbookName -Path $scriptFolder -ResourceGroupName $resourceGroupName -AutomationAccountName $automationAccountName -Type PowerShell -Force
+              Publish-AzAutomationRunbook -Name $runbookName -AutomationAccountName $automationAccountName -ResourceGroupName $resourceGroupName
+            azurePowerShellVersion: 'LatestVersion'
+            
+        - task: CopyFiles@2
+          displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+          inputs:
+            SourceFolder:  'ARM Templates'
+            TargetFolder: '$(build.artifactstagingdirectory)'
+        # - task: PublishBuildArtifacts@1
+        #   displayName: 'Publish Artifact: drop'
+          
+        - task: AzurePowerShell@5
+          displayName: 'Azure PowerShell script: Upload ARM Template'
+          inputs:
+            azureSubscription: 'zne-ess2-n-test-sbc'
+            ScriptType: InlineScript            
+            Inline: |
+              $resourceGroupName = $(armtemplateRGName)
+              $storageAccountName = $(storageAccountName)
+              $storageKey = (Get-AzStorageAccountKey -ResourceGroupName $resourceGroupName -Name $storageAccountName).Value[0]
+              $storageContext = New-AzStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageKey
+              $containerName = $(containerName)
+              $localFile = "$(build.artifactstagingdirectory)/KeyVaultDeployment.template.json"
+              Set-AzStorageBlobContent -File $localFile -Container $containerName -Blob "Keyvault/KeyVaultDeployment.template.json" -Context $storageContext -Force
+            azurePowerShellVersion: 'LatestVersion'
+
+        - task: DownloadBuildArtifacts@0
+          inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'CustomExtension'
+              downloadPath: '$(System.DefaultWorkingDirectory)'
+
+        - task: TfxInstaller@3
+          inputs:
+              version: 'v0.7.x'
+         
+        - task: PublishAzureDevOpsExtension@3
+          displayName: 'Publish Extension'
+          inputs:              
+              connectedServiceName: 'MarketPlaceServiceConnection'
+              fileType: 'vsix'
+              vsixFile: '$(System.DefaultWorkingDirectory)/CustomExtension/*.vsix'
+              publisherId: $(publisherId)
+              extensionVersion: '$(z)'
+              extensionName: $(extensionName)
+              extensionVisibility: public
+              extensionId: $(extensionId)
+              extensionPricing: free 
+              updateTasksId: true
+

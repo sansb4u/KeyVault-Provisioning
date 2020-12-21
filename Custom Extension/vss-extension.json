@@ -1,0 +1,41 @@
+{
+  "manifestVersion": 1,
+  "id": "__extensionID__",
+  "name": "__extensionName__",
+  "version": "__extensionVersion__",
+  "publisher": "__publisher__",
+  "targets": [
+    {
+      "id": "Microsoft.VisualStudio.Services"
+    }
+  ],
+  "description": "Publish Key Vault Extension To All Accounts",
+  "categories": [
+    "Azure Pipelines"
+  ],
+  "icons": {
+    "default": "images/extension-icon.JPG"
+  },
+  "files": [
+    {
+      "path": "keyVaultExt"
+    }
+  ],
+   "content": {
+        "details": {
+          "path": "readme.md"
+        }
+      },
+  "contributions": [
+    {
+      "id": "custom-keyVaultExt",
+      "type": "ms.vss-distributed-task.task",
+      "targets": [
+        "ms.vss-distributed-task.tasks"
+      ],
+      "properties": {
+        "name": "keyVaultExt"
+      }
+    }
+  ]
+}

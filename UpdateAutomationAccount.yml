@@ -1,0 +1,23 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: 'vs2017-win2016'
+variables:  
+- group: PROD
+steps:
+- task: AzurePowerShell@5
+  inputs:
+    azureSubscription: 'zne-ess2-n-test-sbc'
+    ScriptType: 'InlineScript'
+    Inline: |
+       Write-Host 'test' 
+       [bool] $encryptionval = 0
+       Set-AzAutomationVariable -Name $(automationaccountvariablename) -Encrypted $encryptionval -Value $(automationaccountvariablevalue) -ResourceGroupName 'ZNE-ESS2-N-02-AUT-RSG' -AutomationAccountName $(automationAccountName)
+    azurePowerShellVersion: 'LatestVersion'
+    

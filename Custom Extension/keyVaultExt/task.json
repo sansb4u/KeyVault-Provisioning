@@ -1,0 +1,235 @@
+{
+  "id": "__taskID__",
+  "name": "__taskName__",
+  "friendlyName": "__taskFriendlyName__",
+  "description": "Azure Key Vaults can be used to securely store and tightly control access to certificates, keys, and secrets.",
+  "author": "BP MAPS Team",
+  "helpMarkDown": "Please see the <a href=\"https://digitalfoundations.visualstudio.com/MAPS%20Archetypes/_wiki/wikis/MAPS-Archetypes.wiki/954/Key-Vault-Provisioning-User-Guide\">MAPS Key Vault Provisioning User Guide</a> wiki page for more information and a guide on how to provision this resource.\r\n\rFor even further detail, please see <a href=\"https://docs.microsoft.com/en-us/azure/key-vault/general/overview\">Microsoft's About Azure Key Vault</a> page.",
+  "category": "Utility",
+  "visibility": [
+    "Build",
+    "Release"
+  ],
+  "demands": [],
+  "version": {
+    "Major": "1",
+    "Minor": "1",
+    "Patch": "__taskPatchVersion__"
+  },
+  "minimumAgentVersion": "1.95.0",
+  "instanceNameFormat": "Azure Key Vault Provisioning Extension (MAPS) $(message)",
+  "groups": [
+    {
+      "name": "azureDetails",
+      "displayName": "Azure Details",
+      "isExpanded": true
+    },
+    {
+      "name": "deploymentDetails",
+      "displayName": "Deployment Details",
+      "isExpanded": true
+    }
+  ],
+  "inputs": [
+    {
+      "name": "ConnectedServiceName",
+      "type": "connectedService:AzureRM",
+      "label": "Azure Subscription",
+      "defaultValue": "",
+      "required": true,
+      "helpMarkDown": "The dropdown lists all the service endpoints and azure subscriptions you have access to as a part of this VSTS project. Choose a service endpoint which has been created for your project and has access to the resource group where you want to deploy key vault.",
+      "groupName": "azureDetails"
+    },
+    {
+      "name": "rsgName",
+      "type": "picklist",
+      "label": "Resource Group",
+      "required": true,
+      "helpMarkDown": "The dropdown lists all the resource groups to which the above selected service endpoint has access to. Select the resource group where key vault is already deployed or where you want to deploy a new one, depending upon the feature selected.",
+      "groupName": "azureDetails",
+      "properties": {
+        "EditableOptions": "True"
+      }
+    },
+    {
+      "name": "features",
+      "type": "picklist", 
+      "label": "Features",
+      "defaultValue": "Select",
+      "helpMarkDown": "Select a feature from the dropdown, either to create a new key vault or use an existing key vault to create a new key or secret.",
+      "groupName": "deploymentDetails",
+      "options": {
+        "createNew": "Create New",
+        "useExisting": "Use Existing"
+      }
+    },
+    {
+      "name": "additionalChar",
+      "type": "string",
+      "label": "Additional Charecterstics",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "This is an optional text field which, if provided, will be appended to the Key Vault name, which can be useful in identifying specific Key Vaults. The max length of text can be 5 characters.",
+      "groupName": "deploymentDetails",
+      "visibleRule": "features = createNew",
+      "validation": {
+        "expression": "isMatch(value,'^([0-9]|[a-z]|[A-Z]){0,5}$','IgnoreCase')",
+        "message": "Please provide an alphanumeric value of length 0 to 5."
+      }
+    },
+    {
+      "name": "vaultName",
+      "type": "picklist",
+      "label": "Select Existing Vault",
+      "defaultValue": "",
+      "required": true,
+      "helpMarkDown": "The dropdown lists all the Key Vaults present in the above selected Resource Group. Select the one in which you want to store your new key or secret.",
+      "groupName": "deploymentDetails",
+      "visibleRule": "features = useExisting",
+      "properties": {
+        "EditableOptions": "True"
+      }
+    },
+    {
+      "name": "type",
+      "type": "picklist",
+      "label": "Type",
+      "required": true,
+      "defaultValue": "Key",
+      "visibleRule": "features = useExisting || features = createNew ",
+      "options": {
+        "Key": "Key",
+        "Secret": "Secret"
+      },
+      "helpMarkDown": "Choose the type of value which you want to store in Key Vault. (Key or Secret).",
+      "groupName": "deploymentDetails"
+    },
+    {
+      "name": "KeyName",
+      "type": "string",
+      "label": " Key Name ",
+      "defaultValue": "",
+      "required": true,
+      "visibleRule": "features = useExisting && type = Key ",
+      "helpMarkDown": "Please provide a name for your key. It may be 1 to 127 characters long and may contain alphanumeric characters and hyphens(-).",
+      "groupName": "deploymentDetails",
+      "validation": {
+        "expression": "isMatch(value,'^([0-9]|[a-z]|[A-Z]|-){0,127}$','IgnoreCase')",
+        "message": "Please provide a valid name of length 1 to 127. It may contain alphanumeric characters and hyphens(-)."
+      }
+    },
+    {
+      "name": "SecretName",
+      "type": "string",
+      "label": "Secret Name ",
+      "defaultValue": "",
+      "required": true,
+      "visibleRule": "features = useExisting && type = Secret  ",
+      "helpMarkDown": "Please provide a name for your secret. It may be 1 to 127 characters long and may contain alphanumeric characters and hyphens(-).",
+      "groupName": "deploymentDetails",
+      "validation": {
+        "expression": "isMatch(value,'^([0-9]|[a-z]|[A-Z]|-){0,127}$','IgnoreCase')",
+        "message": "Please provide a valid name of length 1 to 127. It may contain alphanumeric characters and hyphens(-)."
+      }
+    },
+    {
+      "name": "KeyNameNotRequired",
+      "type": "string",
+      "label": " Key Name ",
+      "defaultValue": "",
+      "required": false,
+      "visibleRule": " features = createNew  && type = Key ",
+      "helpMarkDown": "Please provide a name for your key. It may be 1 to 127 characters long and may contain alphanumeric characters and hyphens(-).",
+      "groupName": "deploymentDetails",
+      "validation": {
+        "expression": "isMatch(value,'^([0-9]|[a-z]|[A-Z]|-){0,127}$','IgnoreCase')",
+        "message": "Please provide a valid name of length 1 to 127. It may contain alphanumeric characters and hyphens(-)."
+      }
+    },
+    {
+      "name": "SecretNameNotRequired",
+      "type": "string",
+      "label": " Secret Name ",
+      "defaultValue": "",
+      "required": false,
+      "visibleRule": " features = createNew && type = Secret ",
+      "helpMarkDown": "Please provide a name for your secret. It may be 1 to 127 characters long and may contain alphanumeric characters and hyphens(-).",
+      "groupName": "deploymentDetails",
+      "validation": {
+        "expression": "isMatch(value,'^([0-9]|[a-z]|[A-Z]|-){0,127}$','IgnoreCase')",
+        "message": "Please provide a valid name of length 1 to 127. It may contain alphanumeric characters and hyphens(-)."
+      }
+    },
+    {
+      "name": "secretValue",
+      "type": "string",
+      "label": "Secret Value",
+      "defaultValue": "",
+      "required": true,
+      "helpMarkDown": "Provide the value of your secret.",
+      "groupName": "deploymentDetails",
+      "visibleRule": "SecretName != \"\" && type = Secret && features = useExisting  "
+    },
+    {
+      "name": "secretValueNotRequired",
+      "type": "string",
+      "label": "Secret Value",
+      "defaultValue": "",
+      "required": true,
+      "helpMarkDown": "Provide the value of your secret.",
+      "groupName": "deploymentDetails",
+      "visibleRule": "SecretNameNotRequired != \"\" && type = Secret && features = createNew "
+    }
+  ],
+  "dataSourceBindings": [
+    {
+      "target": "rsgName",
+      "endpointId": "$(ConnectedServiceName)",
+      "endpointUrl": "{{{endpoint.url}}}/subscriptions/$(endpoint.subscriptionId)/resourceGroups?api-version=2019-05-10",
+      "resultSelector": "jsonpath:$.value[?(@.name =~ /^((?!net-rsg).)*$/i && @.name =~ /^((?!ase-rsg).)*$/i && @.name =~ /^((?!net-rsg).)*$/i)].name",
+      "parameters": {
+        "resourceGroup": "$(deploymentResourceGroup)"
+      }
+    },
+    {
+      "target": "vaultName",
+      "endpointId": "$(ConnectedServiceName)",
+      "endpointUrl": "{{{endpoint.url}}}/subscriptions/$(endpoint.subscriptionId)/resourceGroups/$(rsgName)/providers/Microsoft.KeyVault/vaults?api-version=2015-06-01",
+      "resultSelector": "jsonpath:$.value[*].name",
+      "parameters": {
+        "rsgName": "$(rsgName)"
+      }
+    }
+  ],
+  "execution": {
+    "PowerShell3": {
+      "target": "webhook.ps1"
+    }
+  },
+  "OutputVariables": [
+    {
+      "name": "KVName",
+      "description": "This is the output variable for the name of the key vault.  To use this variable in subsequent tasks, enter a reference name in the above input field, then you can use the variable as $(referenceName.KVName)"
+    },
+    {
+      "name": "KVResourceID",
+      "description": "This is the output variable for the resource id of the key vault.  To use this variable in subsequent tasks, enter a reference name in the above input field, then you can use the variable as $(referenceName.KVResourceID)"
+    },
+    {
+      "name": "KVSubscriptionName",
+      "description": "This is the output variable for the name of the azure subscription the key vault is created in.  To use this variable in subsequent tasks, enter a reference name in the above input field, then you can use the variable as $(referenceName.KVSubscriptionName)"
+    },
+    {
+      "name": "KVRSGName",
+      "description": "This is the output variable for the name of the resource group the key vault is stored in.  To use this variable in subsequent tasks, enter a reference name in the above input field, then you can use the variable as $(referenceName.KVRSGName)"
+    },
+    {
+      "name": "KVKeyName",
+      "description": "This is the output variable for the name of 'Key' which is stored in key vault. This can be used only if you have selected 'Key' as type in extension input. To use this variable in subsequent tasks, enter a reference name in the above input field, then you can use the variable as $(referenceName.KVKeyName)"
+    },
+    {
+      "name": "KVSecretName",
+      "description": "This is the output variable for the name of 'Secret' which is stored in key vault. This can be used only if you have selected 'Secret' as type in extension input. To use this variable in subsequent tasks, enter a reference name in the above input field, then you can use the variable as $(referenceName.KVSecretName)"
+    }
+  ]
+}
